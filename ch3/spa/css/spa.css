@@ -17,7 +17,7 @@
 
 /** Begin standard selectors */
   body {
-    font : 13px 'Trebuchet MS', Verdana, Helvetica, Arial, sans-serif;
+    font : 14px 'Trebuchet MS', Verdana, Helvetica, Arial, sans-serif;
     color : #444;
     background-color: #888;
   }
@@ -52,10 +52,10 @@
 /** Begin utility selectors */
   .spa-x-select {}
   .spa-x-clearfloat {
-    height     : 0 !important;
-    float      : none !important;
+    height     : 0      !important;
+    float      : none   !important;
     visibility : hidden !important;
-    clear      : both !important;
+    clear      : both   !important;
   }
 /** End utility selectors */
 
