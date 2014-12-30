@@ -68,7 +68,8 @@ spa.chat = (function() {
     },
     jqueryMap = {},
     setJqueryMap, getEmSize, setPxSizes, setSliderPosition,
-    onClickToggle, configModule, initModule;
+    onClickToggle, configModule, initModule,
+    removeSlider, handleResize;
   // ------------------ END MODULE SCOPE VARIABLES ------------------
 
   // -------------------- BEGIN UTILITY METHODS ---------------------
@@ -265,6 +266,8 @@ spa.chat = (function() {
   return {
     configModule      : configModule,
     initModule        : initModule,
-    setSliderPosition : setSliderPosition
+    setSliderPosition : setSliderPosition,
+    removeSlider      : removeSlider,
+    handleResize      : handleResize
   };
 }());
