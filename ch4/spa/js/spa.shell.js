@@ -29,16 +29,19 @@ spa.shell = (function() {
           + '<div class="spa-shell-main-content"></div>'
         + '</div>'
         + '<div class="spa-shell-foot"></div>'
-        + '<div class="spa-shell-modal"></div>'
+        + '<div class="spa-shell-modal"></div>',
+
+      resize_interval : 200
     },
     stateMap = {
-      $container : null,
-      anchor_map : {},
+      $container  : null,
+      anchor_map  : {},
+      resize_idto : undefined
     },
     jqueryMap = {},
 
     copyAnchorMap    , setJqueryMap ,
-    changeAnchorPart , onHashChange ,
+    changeAnchorPart , onHashChange , onResize ,
     setChatAnchor    , initModule;
   // ------------------ End Module Scope Variables ------------------
 
@@ -130,6 +133,20 @@ spa.shell = (function() {
 
 
   // -------------------- BEGIN EVENT HANDLERS ----------------------
+  // Begin Event handler /onResize/
+  onResize = function (){
+    if ( stateMap.resize_idto ){ return true; }
+
+    spa.chat.handleResize();
+    stateMap.resize_idto = setTimeout(
+      function (){ stateMap.resize_idto = undefined; },
+      configMap.resize_interval
+    );
+
+    return true;
+  };
+  // End Event handler /onResize/
+
   // Begin Event handler /onHashChange/
   // Purpose   : Handles the hashchange event
   // Arguments :
@@ -259,6 +276,7 @@ spa.shell = (function() {
     // anchor is considered on load.
     //
     $(window)
+      .bind( 'resize', onResize )
       .bind( 'hashchange', onHashChange )
       .trigger( 'hashchange' );
   };
