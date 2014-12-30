@@ -16,7 +16,7 @@ spa.shell = (function() {
   var
     configMap = {
       anchor_schema_map : {
-        chat: { open : true, closed : true }
+        chat: { opened : true, closed : true }
       },
       mainHtml : String()
         + '<div class="spa-shell-head">'
@@ -29,26 +29,17 @@ spa.shell = (function() {
           + '<div class="spa-shell-main-content"></div>'
         + '</div>'
         + '<div class="spa-shell-foot"></div>'
-        + '<div class="spa-shell-chat"></div>'
-        + '<div class="spa-shell-modal"></div>',
-
-      chat_extend_time     : 250,
-      chat_retract_time    : 300,
-      chat_extend_height   : 450,
-      chat_retract_height  : 15,
-      chat_extended_title  : 'Click to retract',
-      chat_retracted_title : 'Click to extend'
+        + '<div class="spa-shell-modal"></div>'
     },
     stateMap = {
-      $container        : null,
-      anchor_map        : {},
-      is_chat_retracted : true
+      $container : null,
+      anchor_map : {},
     },
     jqueryMap = {},
 
-    copyAnchorMap, setJqueryMap, toggleChat,
-    changeAnchorPart, onHashChange,
-    onClickChat, initModule;
+    copyAnchorMap    , setJqueryMap ,
+    changeAnchorPart , onHashChange ,
+    setChatAnchor    , initModule;
   // ------------------ End Module Scope Variables ------------------
 
 
@@ -131,70 +122,10 @@ spa.shell = (function() {
   setJqueryMap = function () {
     var $container = stateMap.$container;
     jqueryMap = {
-      $container : $container,
-      $chat : $container.find( '.spa-shell-chat' )
+      $container : $container
     };
   };
   // End DOM method /setJqueryMap/
-
-  // Begin DOM method /toggleChat/
-  // Purpose   : Extends or retracts the chat slider.
-  // State     : sets stateMap.is_chat_retracted
-  //   * true  - slider is retracted
-  //   * false - slider is extended
-  // Arguments :
-  //   * do_extend - if true, extends slider; if false retracts
-  //   * callback  - optional function to execute when animation ends
-  // Settings  :
-  //   * chat_extend_time, chat_retract_time
-  //   * chat_extend_height, chat_retract_height
-  // Returns   : boolean
-  //   * true  - slider animation activated
-  //   * false - slider animation not activated
-  //
-  toggleChat = function ( do_extend, callback ) {
-    var
-      chat_height_px = jqueryMap.$chat.height(),
-      is_open    = chat_height_px === configMap.chat_extend_height,
-      is_closed  = chat_height_px === configMap.chat_retract_height,
-      is_sliding = ! is_open && ! is_closed;
-
-    // avoid race condition
-    if ( is_sliding ) { return false; }
-
-    // Begin extend chat slider
-    if ( do_extend ) {
-      jqueryMap.$chat.animate(
-        { height : configMap.chat_extend_height },
-        configMap.chat_extend_time,
-        function() {
-          jqueryMap.$chat.attr(
-            'title', configMap.chat_extended_title
-          );
-          stateMap.is_chat_retracted = false;
-          if ( callback ){ callback( jqueryMap.$chat ); }
-        }
-      );
-      return true;
-    }
-    // End extend chat slider
-
-    // Begin retract chat slider
-    jqueryMap.$chat.animate(
-      { height : configMap.chat_retract_height },
-      configMap.chat_retract_time,
-      function() {
-        jqueryMap.$chat.attr(
-          'title', configMap.chat_retracted_title
-        );
-        stateMap.is_chat_retracted = true;
-        if ( callback ){ callback( jqueryMap.$chat ); }
-      }
-    );
-    // End retract chat slider
-    return true;
-  };
-  // End DOM method /toggleChat/
   // ----------------------- END DOM METHODS ------------------------
 
 
@@ -209,14 +140,14 @@ spa.shell = (function() {
   //   * Parses the URI anchor component
   //   * Compares proposed application state with current
   //   * Adjust the application only where proposed state
-  //     differes from existing
+  //     differes from existing and is allowed by anchor schema
   //
-  onHashChange = function ( event ) {
+  onHashChange = function () {
     var
-      anchor_map_previous = copyAnchorMap(),
+      _s_chat_previous, _s_chat_proposed, s_chat_proposed,
       anchor_map_proposed,
-      _s_chat_previous, _s_chat_proposed,
-      s_chat_proposed;
+      is_ok               = true,
+      anchor_map_previous = copyAnchorMap();
 
     // attempt to parse anchor
     try { anchor_map_proposed = $.uriAnchor.makeAnchorMap(); }
@@ -236,54 +167,90 @@ spa.shell = (function() {
     ) {
       s_chat_proposed = anchor_map_proposed.chat;
       switch ( s_chat_proposed ) {
-        case 'open' :
-          toggleChat( true );
+        case 'opened' :
+          is_ok = spa.chat.setSliderPosition( 'opened' );
           break;
         case 'closed' :
-          toggleChat( false );
+          is_ok = spa.chat.setSliderPosition( 'closed' );
           break;
         default :
-          toggleChat( false );
+          spa.chat.setSliderPosition( 'closed' );
           delete anchor_map_proposed.chat;
           $.uriAnchor.setAnchor( anchor_map_proposed, null, true );
       }
     }
     // End adjust chat component if changed
 
+    // Begin revert anchor if slider change denied
+    if ( ! is_ok ){
+      if ( anchor_map_previous ){
+        $.uriAnchor.setAnchor( anchor_map_previous, null, true );
+        stateMap.anchor_map = anchor_map_previous;
+      } else {
+        delete anchor_map_proposed.chat;
+        $.uriAnchor.setAnchor( anchor_map_proposed, null, true );
+      }
+    }
+
     return false;
   };
   // End Event handler /onHashChange/
 
-  // Begin Event handler /onClickChat/
+  // Begin callback method /setChatAnchor/
+  // Example   : setChatAnchor( 'closed' );
+  // Purpose   : Change the chat component of the anchor
+  // Arguments :
+  //   * position_type - may be 'closed' or 'opened'
+  // Action    :
+  //   Changes the URI anchor parameter 'chat' to the requested value
+  //   if possible.
+  // Returns   :
+  //   * true - requested anchor part was updated
+  //   * false - requested anchor part was not updated
+  // Throws    : none
   //
-  onClickChat = function ( event ) {
-    changeAnchorPart({
-      chat: ( stateMap.is_chat_retracted ? 'open' : 'closed' )
-    });
-    return false;
+  setChatAnchor = function ( position_type ){
+    return changeAnchorPart({ chat : position_type });
   };
-  // End Event handler /onClickChat/
+  // End callback method /setChatAnchor/
+
   // --------------------- END EVENT HANDLERS -----------------------
 
 
   // -------------------- BEGIN PUBLIC METHODS ----------------------
   // Begin Public method /initModule/
+  // Example   : spa.shell.initModule( $('$app_div_id') );
+  // Purpose   :
+  //   Directs the Shell to offer its capability to the user
+  // Arguments :
+  //   * $container
+  //     A jQuery collection that should represent
+  //     a single DOM container
+  // Action    :
+  //   Populates $container with the shell of the UI
+  //   and then configures and initializes feature modules.
+  //   The Shell is also responsibile for browser-wide issues
+  //   such as URI anchor and cookie management.
+  // Returns   : none
+  // Throws    : none
   //
   initModule = function ( $container ) {
     stateMap.$container = $container;
     $container.html( configMap.mainHtml );
     setJqueryMap();
 
-    // initialize chat slider and bind click handler
-    stateMap.is_chat_retracted = true;
-    jqueryMap.$chat
-      .attr( 'title', configMap.chat_retracted_title )
-      .click( onClickChat );
-
     // Configure uriAnchor to use our schema
     $.uriAnchor.configModule({
       schema_map : configMap.anchor_schema_map
     });
+
+    // Configure and initialize feature modules
+    spa.chat.configModule( {
+      set_chat_anchor : setChatAnchor,
+      chat_model      : spa.model.chat,
+      people_model    : spa.model.people
+    });
+    spa.chat.initModule( jqueryMap.$container );
 
     // Handle URI anchor change events
     // This is done /after/ all feature modules are configured
