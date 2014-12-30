@@ -39,10 +39,10 @@ spa.util = (function() {
     error.name    = name_text;
     error.message = msg_text;
 
-    if ( data ){ error.data = data; };
+    if ( data ){ error.data = data; }
 
-    return error
-  }
+    return error;
+  };
   // End Public constructor /makeError/
 
   // Begin Public method /setConfigMap/
@@ -74,7 +74,7 @@ spa.util = (function() {
         }
       }
     }
-  }
+  };
   // End Public method /setConfigMap/
   // --------------------- END PUBLIC METHODS -----------------------
 
