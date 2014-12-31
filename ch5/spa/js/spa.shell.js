@@ -12,6 +12,7 @@
 /*global $, spa */
 
 spa.shell = (function() {
+  'use strict';
   // ----------------- Begin Module Scope Variables -----------------
   var
     configMap = {
@@ -20,9 +21,11 @@ spa.shell = (function() {
       },
       mainHtml : String()
         + '<div class="spa-shell-head">'
-          + '<div class="spa-shell-head-logo"></div>'
+          + '<div class="spa-shell-head-logo">'
+            + '<h1>SPA</h1>'
+            + '<p>javascript end to end</p>'
+          + '</div>'
           + '<div class="spa-shell-head-acct"></div>'
-          + '<div class="spa-shell-head-search"></div>'
         + '</div>'
         + '<div class="spa-shell-main">'
           + '<div class="spa-shell-main-nav"></div>'
@@ -42,6 +45,7 @@ spa.shell = (function() {
 
     copyAnchorMap    , setJqueryMap ,
     changeAnchorPart , onHashChange , onResize ,
+    onTapAcct        , onLogin      , onLogout ,
     setChatAnchor    , initModule;
   // ------------------ End Module Scope Variables ------------------
 
@@ -125,7 +129,9 @@ spa.shell = (function() {
   setJqueryMap = function () {
     var $container = stateMap.$container;
     jqueryMap = {
-      $container : $container
+      $container : $container,
+      $acct      : $container.find('.spa-shell-head-acct'),
+      $nav       : $container.find('.spa-shell-main-nav')
     };
   };
   // End DOM method /setJqueryMap/
@@ -146,6 +152,38 @@ spa.shell = (function() {
     return true;
   };
   // End Event handler /onResize/
+
+  // Begin Event handler /onTapAcct/
+  //
+  onTapAcct = function () {
+    var user_name, user = spa.model.people.get_user();
+    if ( user.get_is_anon() ) {
+      user_name = prompt( 'Please sign-in' );
+      spa.model.people.login( user_name );
+      jqueryMap.$acct.text( '... processing ...' );
+    }
+    else {
+      spa.model.people.logout();
+    }
+
+    return false;
+  };
+  // End Event handler /onTapAcct/
+
+  // Begin Event handler /onLogin/
+  //
+  onLogin = function ( event, login_user ) {
+    jqueryMap.$acct.text( login_user.name );
+    console.log(event);
+  };
+  // End Event handler /onLogin/
+
+  // Begin Event handler /onLogout/
+  //
+  onLogout = function () {
+    jqueryMap.$acct.text( 'Please sign-in' );
+  };
+  // End Event handler /onLogout/
 
   // Begin Event handler /onHashChange/
   // Purpose   : Handles the hashchange event
@@ -255,6 +293,12 @@ spa.shell = (function() {
     stateMap.$container = $container;
     $container.html( configMap.mainHtml );
     setJqueryMap();
+
+    $.gevent.subscribe( $container, 'spa-login', onLogin );
+    $.gevent.subscribe( $container, 'spa-logout', onLogout );
+    jqueryMap.$acct
+      .text( 'Please sign-in' )
+      .bind( 'utap', onTapAcct );
 
     // Configure uriAnchor to use our schema
     $.uriAnchor.configModule({
